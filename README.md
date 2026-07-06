@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🐍 DevSphere Python Backend Internship
+# 🐍 DevSphere Python Backend Internship Journey
 
 ### Documenting my 8-week Python Backend Development internship using FastAPI.
 
@@ -19,7 +19,22 @@
 
 This repository documents my **8-week Python Backend Development Internship**, where I am learning backend development by building practical applications using **FastAPI**.
 
-The purpose of this repository is to track my progress, apply software engineering best practices, and build a portfolio of backend development projects throughout the internship.
+Rather than serving as a finished project, this repository captures my learning journey week by week. Each task introduces new backend development concepts that are implemented, tested, documented, and version-controlled using professional development practices.
+
+---
+
+# ✨ Features
+
+Current implementation includes:
+
+- ⚡ FastAPI application setup
+- 🌐 GET endpoints (`/`, `/about`, `/features`)
+- 📤 POST endpoint for accepting JSON data
+- ✅ Request validation using Pydantic models
+- 📁 Modular project structure using routers and models
+- 🔄 Custom HTTP middleware for request logging
+- 🧪 API testing with Postman
+- 📚 Interactive API documentation using Swagger UI (`/docs`)
 
 ---
 
@@ -59,7 +74,12 @@ devsphere-python-backend-internship/
 ├── .venv/
 ├── app/
 │   ├── __init__.py
-│   └── main.py
+│   ├── main.py
+│   ├── models.py
+│   └── routers/
+│       ├── __init__.py
+│       └── features.py
+│
 ├── .gitignore
 ├── .python-version
 ├── LICENSE
@@ -134,8 +154,11 @@ http://127.0.0.1:8000/docs
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/` | Returns server status |
-| GET | `/about` | Returns information about the backend application |
+| GET | `/` | Server health check |
+| GET | `/about` | Information about the backend |
+| GET | `/features` | Retrieve all available features |
+| POST | `/features` | Create a new feature |
+| GET | `/docs` | Interactive Swagger API documentation |
 
 ---
 
@@ -145,7 +168,7 @@ http://127.0.0.1:8000/docs
 
 ```json
 {
-  "message": "Server Running"
+  "message": "Server Running!"
 }
 ```
 
@@ -157,37 +180,76 @@ http://127.0.0.1:8000/docs
 }
 ```
 
+### GET /features
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Fast Performance",
+    "description": "High-speed backend APIs."
+  },
+  {
+    "id": 2,
+    "title": "Responsive Design",
+    "description": "Works on all devices."
+  },
+  {
+    "id": 3,
+    "title": "Easy Integration",
+    "description": "Simple REST API integration."
+  }
+]
+```
+
+### POST /features
+
+Request
+
+```json
+{
+  "title": "Secure",
+  "description": "Built with security best practices."
+}
+```
+
+Response
+
+```json
+{
+  "message": "Feature added successfully.",
+  "feature": {
+    "title": "Secure",
+    "description": "Built with security best practices."
+  }
+}
+```
+
 ---
 
 # 📅 Internship Progress
 
-## ✅ Week 1 Completed
-
-Implemented:
-
-- FastAPI project setup using `uv`
-- Virtual environment configuration
-- Root (`/`) endpoint
-- About (`/about`) endpoint
-- HTTP middleware for request logging
-- Browser testing
-- Postman API testing
-- GitHub repository setup and version control
-
-Future weeks will introduce additional backend concepts and features as the internship progresses.
+- [x] **Week 1** — FastAPI setup, GET endpoints, middleware, browser & Postman testing
+- [x] **Week 2** — REST APIs, JSON handling, Pydantic models, modular routing, GET & POST endpoints
+- [ ] Week 3
+- [ ] Week 4
+- [ ] Week 5
+- [ ] Week 6
+- [ ] Week 7
+- [ ] Week 8
 
 ---
 
-# 🚀 Planned Learning
+# 🗺️ Roadmap
 
-As the internship continues, I plan to explore:
+Future topics planned during this internship include:
 
-- Request and response models with Pydantic
-- CRUD APIs
+- CRUD operations
+- Request and response models
 - Database integration (SQLite/PostgreSQL)
-- Authentication and Authorization
-- JWT Authentication
 - SQLAlchemy ORM
+- Authentication & Authorization
+- JWT Authentication
 - Environment variables
 - Automated testing with pytest
 - Docker
@@ -199,8 +261,9 @@ As the internship continues, I plan to explore:
 
 **Saboor Hussain**
 
-- GitHub: https://github.com/saboor-h5
-- LinkedIn: https://www.linkedin.com/in/saboor-h5
+- GitHub: **https://github.com/saboor-h5**
+- LinkedIn: **https://www.linkedin.com/in/saboor-h5**
+
 ---
 
-> This repository is maintained as part of my DevSphere Python Backend Development Internship and will be updated weekly as I progress through the program.
+> 📚 This repository is continuously updated throughout my DevSphere Python Backend Development Internship to document both my learning progress and practical backend development experience.
