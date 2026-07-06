@@ -1,24 +1,16 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
+from app.routers.features import router
 
 app = FastAPI()
 
-
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    print(f"Request: {request.method} {request.url}")
-
-    response = await call_next(request)
-
-    return response
-
-
 @app.get("/")
-def home():
-    return {"message": "Server Running"}
+def root():
+    return {"message": "Server Running!"}
 
 
 @app.get("/about")
 def about():
-    return {
-        "message": "This backend server is built using FastAPI."
-    }
+    return {"message": "This backend server is built using FastAPI."}
+
+
+app.include_router(router)  
