@@ -1,5 +1,8 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Header, HTTPException, Depends
 from app.routers.features import router as features_router
+from app.routers.users import router as users_router
+from app.jwt_handler import verify_access_token
+from app.dependencies import get_current_user
 
 app = FastAPI()
 
@@ -21,4 +24,14 @@ def about():
     return {"message": "This backend server is built using FastAPI."}
 
 
+@app.get("/profile")
+def profile(
+    current_user: dict = Depends(get_current_user)
+):
+    return {
+        "message": "Welcome",
+        "user": current_user["sub"]
+    }
+
 app.include_router(features_router)
+app.include_router(users_router)

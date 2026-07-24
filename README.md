@@ -9,6 +9,7 @@
 ![Uvicorn](https://img.shields.io/badge/Uvicorn-ASGI_Server-4051B5?style=for-the-badge)
 ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
 ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=for-the-badge&logo=sqlalchemy&logoColor=white)
+![JWT](https://img.shields.io/badge/JWT-Auth-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)
 ![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
 ![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github)
 ![Postman](https://img.shields.io/badge/Postman-FF6C37?style=for-the-badge&logo=postman&logoColor=white)
@@ -35,6 +36,12 @@ The purpose of this repository is to track my progress, apply software engineeri
 - 🗄️ MySQL database integration
 - ⚙️ Database operations using SQLAlchemy
 - 🧪 API testing with Postman
+- 👤 User registration
+- 🔑 User login
+- 🔒 Password hashing using Passlib + Bcrypt
+- 🎫 JWT access token generation and verification
+- 🛡️ Protected routes using OAuth2PasswordBearer
+- 🧩 Dependency injection for reusable authentication logic
 
 ---
 
@@ -63,6 +70,9 @@ Throughout this internship, I aim to:
 | Database | MySQL |
 | Database Toolkit | SQLAlchemy |
 | Database Driver | PyMySQL |
+| Password Hashing | Passlib + Bcrypt |
+| Token Handling | Python-Jose |
+| Authentication Scheme | OAuth2PasswordBearer |
 | ASGI Server | Uvicorn |
 | Package Manager | uv |
 | Version Control | Git |
@@ -82,9 +92,14 @@ devsphere-python-backend-internship/
 │   ├── database.py
 │   ├── main.py
 │   ├── models.py
+│   ├── schemas.py
+│   ├── security.py
+│   ├── jwt_handler.py
+│   ├── dependencies.py
 │   └── routers/
 │       ├── __init__.py
-│       └── features.py
+│       ├── features.py
+│       └── users.py
 │
 ├── .gitignore
 ├── .python-version
@@ -166,17 +181,31 @@ Current database operations include:
 
 - Insert new records
 - Retrieve stored records
+- Store registered users with hashed passwords
+
+---
+
+# 🔐 Authentication
+
+User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)**.
+
+- Passwords are hashed using **Passlib + Bcrypt** before being stored — plain-text passwords are never saved.
+- On successful login, the server issues a JWT access token.
+- Protected routes require this token to be sent in the `Authorization` header and are validated using a reusable dependency before the request is processed.
 
 ---
 
 # 🔗 API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | Server health check |
-| GET | `/about` | Information about the backend |
-| GET | `/features` | Retrieve all features from the database |
-| POST | `/features` | Add a new feature to the database |
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|:---------------:|
+| GET | `/` | Server health check | No |
+| GET | `/about` | Information about the backend | No |
+| GET | `/features` | Retrieve all features from the database | No |
+| POST | `/features` | Add a new feature to the database | No |
+| POST | `/users/register` | Register a new user with a hashed password | No |
+| POST | `/users/login` | Authenticate a user and return a JWT access token | No |
+| GET | `/profile` | Retrieve the authenticated user's profile | Yes |
 
 ---
 
@@ -210,6 +239,35 @@ Current database operations include:
 }
 ```
 
+### POST /users/register
+
+```json
+{
+    "id": 1,
+    "username": "saboor",
+    "email": "saboor@example.com"
+}
+```
+
+### POST /users/login
+
+```json
+{
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "bearer"
+}
+```
+
+### GET /profile
+
+```json
+{
+    "id": 1,
+    "username": "saboor",
+    "email": "saboor@example.com"
+}
+```
+
 ---
 
 # 📅 Internship Progress
@@ -217,7 +275,7 @@ Current database operations include:
 - ✅ Week 1 — FastAPI setup, GET endpoints, middleware, browser & Postman testing
 - ✅ Week 2 — REST APIs, JSON handling, Pydantic models, modular routing, GET & POST endpoints
 - ✅ Week 3 — MySQL setup, SQLAlchemy integration, database connectivity, Insert & Read operations
-- ⬜ Week 4
+- ✅ Week 4 — User registration & login, password hashing with Passlib + Bcrypt, JWT authentication, protected routes, OAuth2PasswordBearer, dependency injection
 - ⬜ Week 5
 - ⬜ Week 6
 - ⬜ Week 7
