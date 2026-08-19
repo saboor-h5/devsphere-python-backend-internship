@@ -1,60 +1,43 @@
-from fastapi import APIRouter
-from app.models import Feature
-from sqlalchemy import text
-from app.database import engine
+from fastapi import APIRouter, HTTPException
+from app.schemas import Feature
+from app.crud import features as feature_crud
 
 router = APIRouter()
-
-# Temporary in-memory data
-features = [
-    {
-        "id": 1,
-        "title": "Fast Performance",
-        "description": "High-speed backend APIs."
-    },
-    {
-        "id": 2,
-        "title": "Responsive Design",
-        "description": "Works on all devices."
-    },
-    {
-        "id": 3,
-        "title": "Easy Integration",
-        "description": "Simple REST API integration."
-    }
-]
-
 
 
 @router.post("/features")
 def create_feature(feature: Feature):
-
-    with engine.begin() as connection:
-        connection.execute(
-            text("""
-                INSERT INTO features(title, description)
-                VALUES (:title, :description)
-            """),
-            {
-                "title": feature.title,
-                "description": feature.description
-            }
-        )
-
+    feature_id = feature_crud.create_feature(feature)
     return {
         "message": "Feature added successfully.",
-        "feature": feature
+        "id": feature_id
     }
 
 
 @router.get("/features")
 def get_features():
-    with engine.connect() as connection:
+    return feature_crud.get_features()
 
-        result = connection.execute(
-            text("SELECT * FROM features")
-        )
 
-        rows = result.mappings().all()
+@router.get("/features/{feature_id}")
+def get_feature(feature_id: int):
+    feature = feature_crud.get_feature(feature_id)
+    if not feature:
+        raise HTTPException(status_code=404, detail="Feature not found.")
+    return feature
 
-    return rows
+
+@router.put("/features/{feature_id}")
+def update_feature(feature_id: int, feature: Feature):
+    rowcount = feature_crud.update_feature(feature_id, feature)
+    if rowcount == 0:
+        raise HTTPException(status_code=404, detail="Feature not found.")
+    return {"message": "Feature updated successfully.", "id": feature_id}
+
+
+@router.delete("/features/{feature_id}")
+def delete_feature(feature_id: int):
+    rowcount = feature_crud.delete_feature(feature_id)
+    if rowcount == 0:
+        raise HTTPException(status_code=404, detail="Feature not found.")
+    return {"message": "Feature deleted successfully.", "id": feature_id}

@@ -1,78 +1,65 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy import text
-from app.models import User, LoginRequest
-from app.database import engine
-from app.security import hash_password, verify_password
+from fastapi import APIRouter, Depends, HTTPException
+from app.schemas import User, UserUpdate, LoginRequest
+from app.crud import users as user_crud
+from app.security import verify_password
 from app.jwt_handler import create_access_token
+from app.dependencies import get_current_user
 from fastapi.security import OAuth2PasswordRequestForm
-
-import app
 
 router = APIRouter(
     prefix="/users",
     tags=["Users"]
 )
 
+
 @router.post("/register")
 def register(user: User):
-
-    hashed_password = hash_password(user.password)
-
-    with engine.connect() as connection:
-        connection.execute(
-            text("""
-                INSERT INTO users
-                (username, first_name, last_name, password)
-                VALUES
-                (:username, :first_name, :last_name, :password)
-            """),
-            {
-                "username": user.username,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "password": hashed_password
-            }
-        )
-
-        connection.commit()
-        
+    user_id = user_crud.create_user(user)
     return {
         "message": "User registered successfully",
-        "user": user
+        "id": user_id,
+        "username": user.username
     }
 
 
 @router.post("/login")
 def login(user: OAuth2PasswordRequestForm = Depends()):
+    db_user = user_crud.get_user_by_username(user.username)
 
-    with engine.connect() as connection:
+    if not db_user or not verify_password(user.password, db_user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid username or password.")
 
-        result = connection.execute(
-            text(
-                """
-                SELECT * 
-                FROM users
-                WHERE username = :username
-                """
-            ),
-            {"username": user.username}
-        )
+    access_token = create_access_token({"sub": user.username})
 
-        db_user = result.mappings().first()
-        if not db_user:
-            return {"message": "Invalid username or password."}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
 
-        if not verify_password(
-            user.password,
-            db_user["password"]
-        ):
-            return {"message": "Invalid username or password"}
 
-        access_token = create_access_token(
-            {"sub": user.username}
-        )
+@router.get("/{user_id}")
+def get_user(user_id: int, current_user: dict = Depends(get_current_user)):
+    user = user_crud.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return user
 
-        return{
-            "access_token": access_token,
-            "token_type": "bearer"
-        }
+
+@router.put("/{user_id}")
+def update_user(
+    user_id: int,
+    user: UserUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    rowcount = user_crud.update_user(user_id, user)
+    if rowcount == 0:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return {"message": "User updated successfully.", "id": user_id}
+
+
+@router.delete("/{user_id}")
+def delete_user(user_id: int, current_user: dict = Depends(get_current_user)):
+    rowcount = user_crud.delete_user(user_id)
+    if rowcount == 0:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return {"message": "User deleted successfully.", "id": user_id}

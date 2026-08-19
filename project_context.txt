@@ -1,0 +1,831 @@
+
+
+============================================================
+FILE: .postman\resources.yaml
+============================================================
+# Use this workspace to collaborate
+workspace:
+  id: 1f319464-01c6-44ef-873d-064c94c5d08e
+
+# All resources in the `postman/` folder are automatically registered in Local View.
+# Point to additional files outside the `postman/` folder to register them individually. Example:
+#localResources:
+#  collections:
+#    - ../tests/E2E Test Collection/
+
+
+============================================================
+FILE: app\__init__.py
+============================================================
+
+
+============================================================
+FILE: app\database.py
+============================================================
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import URL
+
+url = URL.create(
+    drivername="mysql+pymysql",
+    username="root",
+    password="##########",
+    host="localhost",
+    database="devsphere",
+)
+
+engine = create_engine(url)
+
+# Remove this testing code before using in FastAPI
+# with engine.connect() as connection:
+#     connection.execute(text("SELECT 1"))
+#     print("Database Connected Successfully!")
+
+
+============================================================
+FILE: app\dependencies.py
+============================================================
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+from app.jwt_handler import verify_access_token
+
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/users/login"
+)
+
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme)
+    ):
+    payload = verify_access_token(token)
+
+    if payload is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token."
+        )
+
+    return payload
+
+
+============================================================
+FILE: app\jwt_handler.py
+============================================================
+from jose import jwt, JWTError
+from datetime import datetime, timedelta, UTC
+
+
+SECRET_KEY = "my_super_secret_key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+
+    expire = datetime.now(UTC) + timedelta(
+        minutes = ACCESS_TOKEN_EXPIRE_MINUTES
+    )
+
+    to_encode.update({"exp": expire})
+
+    encoded_jwt = jwt.encode(
+        to_encode,
+        SECRET_KEY,
+        algorithm = ALGORITHM
+    )
+
+    return encoded_jwt
+
+
+def verify_access_token(token: str):
+
+    try:
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+
+        return payload
+
+    except JWTError:
+        return None
+
+
+============================================================
+FILE: app\main.py
+============================================================
+from fastapi import FastAPI, Request, Header, HTTPException, Depends
+from app.routers.features import router as features_router
+from app.routers.users import router as users_router
+from app.routers.products import router as products_router
+from app.jwt_handler import verify_access_token
+from app.dependencies import get_current_user
+
+app = FastAPI()
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    print(f"{request.method} {request.url}")
+    response = await call_next(request)
+    return response
+
+
+@app.get("/")
+def root():
+    return {"message": "Server Running!"}
+
+
+@app.get("/about")
+def about():
+    return {"message": "This backend server is built using FastAPI."}
+
+
+@app.get("/profile")
+def profile(
+    current_user: dict = Depends(get_current_user)
+):
+    return {
+        "message": "Welcome",
+        "user": current_user["sub"]
+    }
+
+app.include_router(features_router)
+app.include_router(users_router)
+app.include_router(products_router)
+
+
+============================================================
+FILE: app\models.py
+============================================================
+from pydantic import BaseModel
+
+
+class Feature(BaseModel):
+    title: str
+    description: str
+
+
+class User(BaseModel):
+    username: str
+    first_name: str
+    last_name: str
+    password: str
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+============================================================
+FILE: app\routers\__init__.py
+============================================================
+
+
+============================================================
+FILE: app\routers\features.py
+============================================================
+from fastapi import APIRouter
+from app.models import Feature
+from sqlalchemy import text
+from app.database import engine
+
+router = APIRouter()
+
+# Temporary in-memory data
+features = [
+    {
+        "id": 1,
+        "title": "Fast Performance",
+        "description": "High-speed backend APIs."
+    },
+    {
+        "id": 2,
+        "title": "Responsive Design",
+        "description": "Works on all devices."
+    },
+    {
+        "id": 3,
+        "title": "Easy Integration",
+        "description": "Simple REST API integration."
+    }
+]
+
+
+
+@router.post("/features")
+def create_feature(feature: Feature):
+
+    with engine.begin() as connection:
+        connection.execute(
+            text("""
+                INSERT INTO features(title, description)
+                VALUES (:title, :description)
+            """),
+            {
+                "title": feature.title,
+                "description": feature.description
+            }
+        )
+
+    return {
+        "message": "Feature added successfully.",
+        "feature": feature
+    }
+
+
+@router.get("/features")
+def get_features():
+    with engine.connect() as connection:
+
+        result = connection.execute(
+            text("SELECT * FROM features")
+        )
+
+        rows = result.mappings().all()
+
+    return rows
+
+
+============================================================
+FILE: app\routers\products.py
+============================================================
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from app.database import engine
+from sqlalchemy import text
+
+
+router = APIRouter()
+
+
+class ProductCreate(BaseModel):
+    name: str
+    description: str
+    price: float
+    quantity: int
+
+
+
+@router.post("/products")
+def create_product(product: ProductCreate):
+
+    with engine.connect() as connection:
+
+        result = connection.execute(
+            text("""
+                INSERT INTO products
+                (name, description, price, quantity)
+                VALUES
+                (:name, :description, :price, :quantity)
+            """),
+            {
+                "name": product.name,
+                "description": product.description,
+                "price": product.price,
+                "quantity": product.quantity
+            }
+        )
+
+        connection.commit()
+
+        return {
+            "message": "Product created successfully!",
+            "id": result.lastrowid
+        }
+
+
+
+@router.get("/products")
+def get_products():
+
+    with engine.connect() as connection:
+
+        result = connection.execute(
+            text("SELECT * FROM products")
+        )
+
+        products = result.mappings().all()
+
+        return products
+
+
+
+@router.get("/products/{product_id}")
+def get_product(product_id: int):
+
+    with engine.connect() as connection:
+
+        result = connection.execute(
+            text("""
+                SELECT *
+                FROM products
+                WHERE id = :product_id
+            """),
+            {"product_id": product_id}
+        )
+
+        product = result.mappings().first()
+
+        if not product:
+            raise HTTPException(
+                status_code=404,
+                detail="Product not found."
+            )
+
+        return product
+
+
+============================================================
+FILE: app\routers\users.py
+============================================================
+from fastapi import APIRouter, Depends
+from sqlalchemy import text
+from app.models import User, LoginRequest
+from app.database import engine
+from app.security import hash_password, verify_password
+from app.jwt_handler import create_access_token
+from fastapi.security import OAuth2PasswordRequestForm
+
+import app
+
+router = APIRouter(
+    prefix="/users",
+    tags=["Users"]
+)
+
+@router.post("/register")
+def register(user: User):
+
+    hashed_password = hash_password(user.password)
+
+    with engine.connect() as connection:
+        connection.execute(
+            text("""
+                INSERT INTO users
+                (username, first_name, last_name, password)
+                VALUES
+                (:username, :first_name, :last_name, :password)
+            """),
+            {
+                "username": user.username,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "password": hashed_password
+            }
+        )
+
+        connection.commit()
+        
+    return {
+        "message": "User registered successfully",
+        "user": user
+    }
+
+
+@router.post("/login")
+def login(user: OAuth2PasswordRequestForm = Depends()):
+
+    with engine.connect() as connection:
+
+        result = connection.execute(
+            text(
+                """
+                SELECT * 
+                FROM users
+                WHERE username = :username
+                """
+            ),
+            {"username": user.username}
+        )
+
+        db_user = result.mappings().first()
+        if not db_user:
+            return {"message": "Invalid username or password."}
+
+        if not verify_password(
+            user.password,
+            db_user["password"]
+        ):
+            return {"message": "Invalid username or password"}
+
+        access_token = create_access_token(
+            {"sub": user.username}
+        )
+
+        return{
+            "access_token": access_token,
+            "token_type": "bearer"
+        }
+
+
+============================================================
+FILE: app\security.py
+============================================================
+import bcrypt
+from passlib.context import CryptContext
+from pydantic import deprecated
+
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto"
+)
+
+
+def hash_password(password: str):
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str):
+    return pwd_context.verify(
+        plain_password,
+        hashed_password
+    )
+
+
+============================================================
+FILE: postman\globals\workspace.globals.yaml
+============================================================
+name: Globals
+values: []
+
+
+============================================================
+FILE: pyproject.toml
+============================================================
+[project]
+name = "devsphere-python-backend-internship"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "bcrypt==4.0.1",
+    "fastapi>=0.138.2",
+    "passlib[bcrypt]>=1.7.4",
+    "pymysql>=1.2.0",
+    "python-jose[cryptography]>=3.5.0",
+    "python-multipart>=0.0.32",
+    "sqlalchemy>=2.0.51",
+    "uvicorn>=0.49.0",
+]
+
+
+============================================================
+FILE: README.md
+============================================================
+<div align="center">
+
+# 🐍 DevSphere Python Backend Internship
+
+### Documenting my 8-week Python Backend Development internship using FastAPI.
+
+![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![Uvicorn](https://img.shields.io/badge/Uvicorn-ASGI_Server-4051B5?style=for-the-badge)
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=for-the-badge&logo=sqlalchemy&logoColor=white)
+![JWT](https://img.shields.io/badge/JWT-Auth-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)
+![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
+![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github)
+![Postman](https://img.shields.io/badge/Postman-FF6C37?style=for-the-badge&logo=postman&logoColor=white)
+
+</div>
+
+---
+
+# 📖 About
+
+This repository documents my **8-week Python Backend Development Internship**, where I am learning backend development by building practical applications using **FastAPI**.
+
+The purpose of this repository is to track my progress, apply software engineering best practices, and build a portfolio of backend development projects throughout the internship.
+
+---
+
+# ✨ Features
+
+- 📦 REST API development using FastAPI
+- 📥 GET endpoints for retrieving data
+- 📤 POST endpoints for accepting JSON requests
+- ✅ Request validation using Pydantic models
+- 🗂️ Modular project structure using routers and models
+- 🗄️ MySQL database integration
+- ⚙️ Database operations using SQLAlchemy
+- 🧪 API testing with Postman
+- 👤 User registration
+- 🔑 User login
+- 🔒 Password hashing using Passlib + Bcrypt
+- 🎫 JWT access token generation and verification
+- 🛡️ Protected routes using OAuth2PasswordBearer
+- 🧩 Dependency injection for reusable authentication logic
+
+---
+
+# 🎯 Learning Objectives
+
+Throughout this internship, I aim to:
+
+- Learn Python backend development
+- Build RESTful APIs using FastAPI
+- Understand backend architecture and request handling
+- Integrate relational databases with backend applications
+- Write clean, maintainable Python code
+- Practice Git and GitHub workflows
+- Learn API testing with Postman
+- Develop portfolio-quality backend projects
+
+---
+
+# 🛠️ Tech Stack
+
+| Category | Technology |
+|-----------|------------|
+| Language | Python 3.12 |
+| Framework | FastAPI |
+| Validation | Pydantic |
+| Database | MySQL |
+| Database Toolkit | SQLAlchemy |
+| Database Driver | PyMySQL |
+| Password Hashing | Passlib + Bcrypt |
+| Token Handling | Python-Jose |
+| Authentication Scheme | OAuth2PasswordBearer |
+| ASGI Server | Uvicorn |
+| Package Manager | uv |
+| Version Control | Git |
+| Repository Hosting | GitHub |
+| API Testing | Postman |
+
+---
+
+# 📂 Project Structure
+
+```text
+devsphere-python-backend-internship/
+│
+├── .venv/
+├── app/
+│   ├── __init__.py
+│   ├── database.py
+│   ├── main.py
+│   ├── models.py
+│   ├── schemas.py
+│   ├── security.py
+│   ├── jwt_handler.py
+│   ├── dependencies.py
+│   └── routers/
+│       ├── __init__.py
+│       ├── features.py
+│       └── users.py
+│
+├── .gitignore
+├── .python-version
+├── LICENSE
+├── pyproject.toml
+├── README.md
+└── uv.lock
+```
+
+---
+
+# ⚙️ Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/saboor-h5/devsphere-python-backend-internship.git
+
+cd devsphere-python-backend-internship
+```
+
+Create a virtual environment:
+
+```bash
+uv venv
+```
+
+Activate it:
+
+### Windows
+
+```bash
+source .venv/Scripts/activate
+```
+
+### macOS / Linux
+
+```bash
+source .venv/bin/activate
+```
+
+Install project dependencies:
+
+```bash
+uv sync
+```
+
+---
+
+# ▶️ Running the Project
+
+Start the FastAPI development server:
+
+```bash
+uv run uvicorn app.main:app --reload
+```
+
+The application will be available at:
+
+```text
+http://127.0.0.1:8000
+```
+
+Interactive API documentation:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+---
+
+# 🗄️ Database
+
+This project uses **MySQL** as the relational database.
+
+Database connectivity is implemented using **SQLAlchemy** with the **PyMySQL** driver.
+
+Current database operations include:
+
+- Insert new records
+- Retrieve stored records
+- Store registered users with hashed passwords
+
+---
+
+# 🔐 Authentication
+
+User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)**.
+
+- Passwords are hashed using **Passlib + Bcrypt** before being stored — plain-text passwords are never saved.
+- On successful login, the server issues a JWT access token.
+- Protected routes require this token to be sent in the `Authorization` header and are validated using a reusable dependency before the request is processed.
+
+---
+
+# 🔗 API Endpoints
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|:---------------:|
+| GET | `/` | Server health check | No |
+| GET | `/about` | Information about the backend | No |
+| GET | `/features` | Retrieve all features from the database | No |
+| POST | `/features` | Add a new feature to the database | No |
+| POST | `/users/register` | Register a new user with a hashed password | No |
+| POST | `/users/login` | Authenticate a user and return a JWT access token | No |
+| GET | `/profile` | Retrieve the authenticated user's profile | Yes |
+
+---
+
+# 📦 Sample Responses
+
+### GET /
+
+```json
+{
+    "message": "Server Running"
+}
+```
+
+### GET /about
+
+```json
+{
+    "message": "This backend server is built using FastAPI."
+}
+```
+
+### POST /features
+
+```json
+{
+    "message": "Feature added successfully.",
+    "feature": {
+        "title": "Database Connected",
+        "description": "Week 3 completed."
+    }
+}
+```
+
+### POST /users/register
+
+```json
+{
+    "id": 1,
+    "username": "saboor",
+    "email": "saboor@example.com"
+}
+```
+
+### POST /users/login
+
+```json
+{
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "bearer"
+}
+```
+
+### GET /profile
+
+```json
+{
+    "id": 1,
+    "username": "saboor",
+    "email": "saboor@example.com"
+}
+```
+
+---
+
+# 📅 Internship Progress
+
+- ✅ Week 1 — FastAPI setup, GET endpoints, middleware, browser & Postman testing
+- ✅ Week 2 — REST APIs, JSON handling, Pydantic models, modular routing, GET & POST endpoints
+- ✅ Week 3 — MySQL setup, SQLAlchemy integration, database connectivity, Insert & Read operations
+- ✅ Week 4 — User registration & login, password hashing with Passlib + Bcrypt, JWT authentication, protected routes, OAuth2PasswordBearer, dependency injection
+- ⬜ Week 5
+- ⬜ Week 6
+- ⬜ Week 7
+- ⬜ Week 8
+
+---
+
+# 🚀 Planned Learning
+
+As the internship continues, I plan to explore:
+
+- PUT, PATCH and DELETE operations
+- CRUD APIs
+- SQLAlchemy ORM
+- Authentication and Authorization
+- JWT Authentication
+- Environment variables
+- Automated testing with pytest
+- Docker
+- Deployment
+
+---
+
+# 👨‍💻 Author
+
+**Saboor Hussain**
+
+- GitHub: https://github.com/saboor-h5
+- LinkedIn: https://www.linkedin.com/in/saboor-h5
+
+---
+
+> This repository is maintained as part of my DevSphere Python Backend Development Internship and is updated weekly to document my learning journey and backend development progress.
+
+
+============================================================
+FILE: requirements.txt
+============================================================
+annotated-doc==0.0.4
+annotated-types==0.7.0
+anyio==4.14.1
+click==8.4.2
+colorama==0.4.6
+fastapi==0.138.2
+greenlet==3.5.3
+h11==0.16.0
+idna==3.18
+passlib==1.7.4
+pydantic==2.13.4
+pydantic-core==2.46.4
+pymysql==1.2.0
+sqlalchemy==2.0.51
+starlette==1.3.1
+typing-extensions==4.15.0
+typing-inspection==0.4.2
+uvicorn==0.49.0
+
+
+============================================================
+FILE: test.py
+============================================================
+from app.security import hash_password
+
+print(hash_password("Saboor123"))
+
+
+============================================================
+FILE: test_jwt.py
+============================================================
+from app.jwt_handler import create_access_token
+
+token = create_access_token(
+    {"sub": "saboor"}
+)
+
+print(token)

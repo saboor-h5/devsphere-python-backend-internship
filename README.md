@@ -31,8 +31,10 @@ The purpose of this repository is to track my progress, apply software engineeri
 - 📦 REST API development using FastAPI
 - 📥 GET endpoints for retrieving data
 - 📤 POST endpoints for accepting JSON requests
+- ✏️ PUT endpoints for updating existing records
+- 🗑️ DELETE endpoints for removing records
 - ✅ Request validation using Pydantic models
-- 🗂️ Modular project structure using routers and models
+- 🗂️ Modular project structure using routers, schemas, and a CRUD (data-access) layer
 - 🗄️ MySQL database integration
 - ⚙️ Database operations using SQLAlchemy
 - 🧪 API testing with Postman
@@ -42,6 +44,7 @@ The purpose of this repository is to track my progress, apply software engineeri
 - 🎫 JWT access token generation and verification
 - 🛡️ Protected routes using OAuth2PasswordBearer
 - 🧩 Dependency injection for reusable authentication logic
+- 🏗️ MVC-style architecture separating routing, business logic, and data validation
 
 ---
 
@@ -91,14 +94,19 @@ devsphere-python-backend-internship/
 │   ├── __init__.py
 │   ├── database.py
 │   ├── main.py
-│   ├── models.py
 │   ├── schemas.py
 │   ├── security.py
 │   ├── jwt_handler.py
 │   ├── dependencies.py
+│   ├── crud/
+│   │   ├── __init__.py
+│   │   ├── products.py
+│   │   ├── features.py
+│   │   └── users.py
 │   └── routers/
 │       ├── __init__.py
 │       ├── features.py
+│       ├── products.py
 │       └── users.py
 │
 ├── .gitignore
@@ -180,8 +188,22 @@ Database connectivity is implemented using **SQLAlchemy** with the **PyMySQL** d
 Current database operations include:
 
 - Insert new records
-- Retrieve stored records
+- Retrieve stored records (single and multiple)
+- Update existing records
+- Delete records
 - Store registered users with hashed passwords
+
+---
+
+# 🏗️ Architecture
+
+As the project grew past simple GET/POST endpoints, the codebase was restructured into a clearer, MVC-inspired layout:
+
+- **`routers/`** — the controller layer. Handles HTTP concerns only: request/response shapes, status codes, and raising the right exceptions.
+- **`crud/`** — the model/data-access layer. Contains the actual SQL and database logic for each resource, with no knowledge of HTTP.
+- **`schemas.py`** — Pydantic models defining the shape of request and response data, used for validation.
+
+This keeps each layer focused on one responsibility and makes the routers easy to read at a glance.
 
 ---
 
@@ -189,9 +211,11 @@ Current database operations include:
 
 User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)**.
 
-- Passwords are hashed using **Passlib + Bcrypt** before being stored — plain-text passwords are never saved.
+- Passwords are hashed using **Passlib + Bcrypt** before being stored — plain-text passwords are never saved or returned in API responses.
 - On successful login, the server issues a JWT access token.
+- On failed login, the server returns a proper `401 Unauthorized` error.
 - Protected routes require this token to be sent in the `Authorization` header and are validated using a reusable dependency before the request is processed.
+- User profile routes (`GET`, `PUT`, `DELETE` on `/users/{id}`) are protected; product and feature reads remain public, with writes open for now and planned to be protected further in a later week.
 
 ---
 
@@ -201,11 +225,22 @@ User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)
 |--------|----------|-------------|:---------------:|
 | GET | `/` | Server health check | No |
 | GET | `/about` | Information about the backend | No |
-| GET | `/features` | Retrieve all features from the database | No |
-| POST | `/features` | Add a new feature to the database | No |
+| GET | `/profile` | Retrieve the authenticated user's profile | Yes |
+| GET | `/features` | Retrieve all features | No |
+| GET | `/features/{id}` | Retrieve a single feature by ID | No |
+| POST | `/features` | Add a new feature | No |
+| PUT | `/features/{id}` | Update an existing feature | No |
+| DELETE | `/features/{id}` | Delete a feature | No |
+| GET | `/products` | Retrieve all products | No |
+| GET | `/products/{id}` | Retrieve a single product by ID | No |
+| POST | `/products` | Add a new product | No |
+| PUT | `/products/{id}` | Update an existing product | No |
+| DELETE | `/products/{id}` | Delete a product | No |
 | POST | `/users/register` | Register a new user with a hashed password | No |
 | POST | `/users/login` | Authenticate a user and return a JWT access token | No |
-| GET | `/profile` | Retrieve the authenticated user's profile | Yes |
+| GET | `/users/{id}` | Retrieve a user's profile by ID | Yes |
+| PUT | `/users/{id}` | Update a user's name details | Yes |
+| DELETE | `/users/{id}` | Delete a user | Yes |
 
 ---
 
@@ -215,7 +250,7 @@ User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)
 
 ```json
 {
-    "message": "Server Running"
+    "message": "Server Running!"
 }
 ```
 
@@ -232,10 +267,46 @@ User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)
 ```json
 {
     "message": "Feature added successfully.",
-    "feature": {
-        "title": "Database Connected",
-        "description": "Week 3 completed."
-    }
+    "id": 4
+}
+```
+
+### PUT /features/{id}
+
+```json
+{
+    "message": "Feature updated successfully.",
+    "id": 4
+}
+```
+
+### DELETE /features/{id}
+
+```json
+{
+    "message": "Feature deleted successfully.",
+    "id": 4
+}
+```
+
+### POST /products
+
+```json
+{
+    "message": "Product created successfully!",
+    "id": 7
+}
+```
+
+### GET /products/{id}
+
+```json
+{
+    "id": 7,
+    "name": "Wireless Mouse",
+    "description": "Ergonomic wireless mouse.",
+    "price": 1500.0,
+    "quantity": 25
 }
 ```
 
@@ -243,9 +314,9 @@ User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)
 
 ```json
 {
+    "message": "User registered successfully",
     "id": 1,
-    "username": "saboor",
-    "email": "saboor@example.com"
+    "username": "saboor"
 }
 ```
 
@@ -258,13 +329,14 @@ User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)
 }
 ```
 
-### GET /profile
+### GET /users/{id}
 
 ```json
 {
     "id": 1,
     "username": "saboor",
-    "email": "saboor@example.com"
+    "first_name": "Saboor",
+    "last_name": "Hussain"
 }
 ```
 
@@ -276,7 +348,7 @@ User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)
 - ✅ Week 2 — REST APIs, JSON handling, Pydantic models, modular routing, GET & POST endpoints
 - ✅ Week 3 — MySQL setup, SQLAlchemy integration, database connectivity, Insert & Read operations
 - ✅ Week 4 — User registration & login, password hashing with Passlib + Bcrypt, JWT authentication, protected routes, OAuth2PasswordBearer, dependency injection
-- ⬜ Week 5
+- ✅ Week 5 — Full CRUD operations (GET, POST, PUT, DELETE) across products, features, and users; restructured project into an MVC-style layout with a dedicated `crud/` data-access layer and consolidated `schemas.py`; fixed login to return proper `401` on invalid credentials; secured user profile endpoints with JWT authentication
 - ⬜ Week 6
 - ⬜ Week 7
 - ⬜ Week 8
@@ -287,12 +359,9 @@ User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)
 
 As the internship continues, I plan to explore:
 
-- PUT, PATCH and DELETE operations
-- CRUD APIs
 - SQLAlchemy ORM
-- Authentication and Authorization
-- JWT Authentication
-- Environment variables
+- Finer-grained authorization (e.g. users only editing their own resources)
+- Environment variables for secrets and config
 - Automated testing with pytest
 - Docker
 - Deployment
