@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.schemas import User, UserUpdate, LoginRequest
+from app.schemas import User, UserUpdate, LoginRequest, UserOut
 from app.crud import users as user_crud
 from app.security import verify_password
 from app.jwt_handler import create_access_token
@@ -29,7 +29,10 @@ def login(user: OAuth2PasswordRequestForm = Depends()):
     if not db_user or not verify_password(user.password, db_user["password"]):
         raise HTTPException(status_code=401, detail="Invalid username or password.")
 
-    access_token = create_access_token({"sub": user.username})
+    access_token = create_access_token({
+        "sub": user.username,
+        "id": db_user["id"]
+    })
 
     return {
         "access_token": access_token,
@@ -37,7 +40,7 @@ def login(user: OAuth2PasswordRequestForm = Depends()):
     }
 
 
-@router.get("/{user_id}")
+@router.get("/{user_id}", response_model=UserOut)
 def get_user(user_id: int, current_user: dict = Depends(get_current_user)):
     user = user_crud.get_user(user_id)
     if not user:

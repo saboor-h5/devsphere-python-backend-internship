@@ -1,16 +1,22 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, UTC
 
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
-SECRET_KEY = "my_super_secret_key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
+
 
 def create_access_token(data: dict):
     to_encode = data.copy()
 
     expire = datetime.now(UTC) + timedelta(
-        minutes = ACCESS_TOKEN_EXPIRE_MINUTES
+        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
     to_encode.update({"exp": expire})
@@ -18,7 +24,7 @@ def create_access_token(data: dict):
     encoded_jwt = jwt.encode(
         to_encode,
         SECRET_KEY,
-        algorithm = ALGORITHM
+        algorithm=ALGORITHM
     )
 
     return encoded_jwt

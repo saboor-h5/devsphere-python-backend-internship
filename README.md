@@ -20,46 +20,27 @@
 
 # 📖 About
 
-This repository documents my **8-week Python Backend Development Internship**, where I am learning backend development by building practical applications using **FastAPI**.
+This repository documents my **8-week Python Backend Development Internship**, where I learned backend development by building a complete backend management system using **FastAPI**.
 
-The purpose of this repository is to track my progress, apply software engineering best practices, and build a portfolio of backend development projects throughout the internship.
+What started as small isolated endpoints in Week 1 grew into a fully authenticated, database-backed REST API with proper validation, ownership-based access control, and a clean layered architecture — the project below reflects that final state.
 
 ---
 
 # ✨ Features
 
-- 📦 REST API development using FastAPI
-- 📥 GET endpoints for retrieving data
-- 📤 POST endpoints for accepting JSON requests
-- ✏️ PUT endpoints for updating existing records
-- 🗑️ DELETE endpoints for removing records
-- ✅ Request validation using Pydantic models
-- 🗂️ Modular project structure using routers, schemas, and a CRUD (data-access) layer
-- 🗄️ MySQL database integration
-- ⚙️ Database operations using SQLAlchemy
-- 🧪 API testing with Postman
-- 👤 User registration
-- 🔑 User login
-- 🔒 Password hashing using Passlib + Bcrypt
-- 🎫 JWT access token generation and verification
-- 🛡️ Protected routes using OAuth2PasswordBearer
-- 🧩 Dependency injection for reusable authentication logic
-- 🏗️ MVC-style architecture separating routing, business logic, and data validation
-
----
-
-# 🎯 Learning Objectives
-
-Throughout this internship, I aim to:
-
-- Learn Python backend development
-- Build RESTful APIs using FastAPI
-- Understand backend architecture and request handling
-- Integrate relational databases with backend applications
-- Write clean, maintainable Python code
-- Practice Git and GitHub workflows
-- Learn API testing with Postman
-- Develop portfolio-quality backend projects
+- 📦 REST API built with FastAPI, covering products, features, and users
+- ✅ Full CRUD (Create, Read, Update, Delete) on every resource
+- 🗂️ Layered architecture — routers, a dedicated CRUD/data-access layer, and Pydantic schemas
+- 🗄️ MySQL database integration via SQLAlchemy
+- 🔑 User registration and login
+- 🔒 Password hashing with Passlib + Bcrypt
+- 🎫 JWT-based authentication with OAuth2PasswordBearer
+- 🛡️ Protected routes via reusable dependency injection
+- 👤 Ownership-based authorization — users can only update or delete records they created
+- 🧪 Request validation on every input (length limits, positive prices, non-negative stock, password strength, etc.)
+- 📤 Typed response models — API responses are documented and filtered, never leaking unintended fields
+- ⚙️ Environment-based configuration via `.env` — no secrets committed to the repo
+- 🧭 Auto-generated interactive API docs at `/docs`
 
 ---
 
@@ -76,10 +57,10 @@ Throughout this internship, I aim to:
 | Password Hashing | Passlib + Bcrypt |
 | Token Handling | Python-Jose |
 | Authentication Scheme | OAuth2PasswordBearer |
+| Configuration | python-dotenv |
 | ASGI Server | Uvicorn |
 | Package Manager | uv |
 | Version Control | Git |
-| Repository Hosting | GitHub |
 | API Testing | Postman |
 
 ---
@@ -109,6 +90,7 @@ devsphere-python-backend-internship/
 │       ├── products.py
 │       └── users.py
 │
+├── .env                 # not committed — see setup below
 ├── .gitignore
 ├── .python-version
 ├── LICENSE
@@ -119,9 +101,9 @@ devsphere-python-backend-internship/
 
 ---
 
-# ⚙️ Installation
+# ⚙️ Getting Started
 
-Clone the repository:
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/saboor-h5/devsphere-python-backend-internship.git
@@ -129,7 +111,7 @@ git clone https://github.com/saboor-h5/devsphere-python-backend-internship.git
 cd devsphere-python-backend-internship
 ```
 
-Create a virtual environment:
+### 2. Create a virtual environment
 
 ```bash
 uv venv
@@ -137,41 +119,64 @@ uv venv
 
 Activate it:
 
-### Windows
-
+**Windows**
 ```bash
 source .venv/Scripts/activate
 ```
 
-### macOS / Linux
-
+**macOS / Linux**
 ```bash
 source .venv/bin/activate
 ```
 
-Install project dependencies:
+### 3. Install dependencies
 
 ```bash
 uv sync
 ```
 
----
+### 4. Set up your database
 
-# ▶️ Running the Project
+Create a MySQL database (any name works, just match it in `.env` below):
 
-Start the FastAPI development server:
+```sql
+CREATE DATABASE devsphere;
+```
+
+### 5. Configure environment variables
+
+Create a `.env` file in the project root with the following keys:
+
+```env
+DB_USERNAME=your_mysql_username
+DB_PASSWORD=your_mysql_password
+DB_HOST=localhost
+DB_NAME=devsphere
+
+SECRET_KEY=your_random_secret_key
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+Generate a secure `SECRET_KEY` rather than typing one by hand:
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+### 6. Run the server
 
 ```bash
 uv run uvicorn app.main:app --reload
 ```
 
-The application will be available at:
+The API will be available at:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-Interactive API documentation:
+Interactive, browsable API docs (recommended starting point):
 
 ```text
 http://127.0.0.1:8000/docs
@@ -179,43 +184,24 @@ http://127.0.0.1:8000/docs
 
 ---
 
-# 🗄️ Database
-
-This project uses **MySQL** as the relational database.
-
-Database connectivity is implemented using **SQLAlchemy** with the **PyMySQL** driver.
-
-Current database operations include:
-
-- Insert new records
-- Retrieve stored records (single and multiple)
-- Update existing records
-- Delete records
-- Store registered users with hashed passwords
-
----
-
 # 🏗️ Architecture
 
-As the project grew past simple GET/POST endpoints, the codebase was restructured into a clearer, MVC-inspired layout:
+The codebase follows a simple, MVC-inspired layered structure:
 
-- **`routers/`** — the controller layer. Handles HTTP concerns only: request/response shapes, status codes, and raising the right exceptions.
-- **`crud/`** — the model/data-access layer. Contains the actual SQL and database logic for each resource, with no knowledge of HTTP.
-- **`schemas.py`** — Pydantic models defining the shape of request and response data, used for validation.
+- **`routers/`** — the HTTP layer. Handles requests, status codes, and authentication checks — no raw SQL lives here.
+- **`crud/`** — the data-access layer. Contains all database queries for each resource, with no knowledge of HTTP.
+- **`schemas.py`** — Pydantic models defining both incoming request validation and outgoing response shapes.
 
-This keeps each layer focused on one responsibility and makes the routers easy to read at a glance.
+Each layer has one job, which keeps the routers short and easy to follow even as the project grows.
 
 ---
 
-# 🔐 Authentication
+# 🔐 Authentication & Authorization
 
-User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)**.
-
-- Passwords are hashed using **Passlib + Bcrypt** before being stored — plain-text passwords are never saved or returned in API responses.
-- On successful login, the server issues a JWT access token.
-- On failed login, the server returns a proper `401 Unauthorized` error.
-- Protected routes require this token to be sent in the `Authorization` header and are validated using a reusable dependency before the request is processed.
-- User profile routes (`GET`, `PUT`, `DELETE` on `/users/{id}`) are protected; product and feature reads remain public, with writes open for now and planned to be protected further in a later week.
+- Passwords are hashed with **Passlib + Bcrypt** before storage — plain-text passwords are never saved or returned.
+- Logging in returns a **JWT access token**, which encodes the user's id and username.
+- Protected endpoints require this token in the `Authorization: Bearer <token>` header.
+- Beyond authentication, most write operations use **ownership-based authorization**: a user can only update or delete the products/features *they* created. Attempting to modify someone else's record returns `403 Forbidden`; a record that doesn't exist at all returns `404 Not Found`.
 
 ---
 
@@ -228,66 +214,25 @@ User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)
 | GET | `/profile` | Retrieve the authenticated user's profile | Yes |
 | GET | `/features` | Retrieve all features | No |
 | GET | `/features/{id}` | Retrieve a single feature by ID | No |
-| POST | `/features` | Add a new feature | No |
-| PUT | `/features/{id}` | Update an existing feature | No |
-| DELETE | `/features/{id}` | Delete a feature | No |
+| POST | `/features` | Add a new feature | Yes |
+| PUT | `/features/{id}` | Update a feature (creator only) | Yes |
+| DELETE | `/features/{id}` | Delete a feature (creator only) | Yes |
 | GET | `/products` | Retrieve all products | No |
 | GET | `/products/{id}` | Retrieve a single product by ID | No |
-| POST | `/products` | Add a new product | No |
-| PUT | `/products/{id}` | Update an existing product | No |
-| DELETE | `/products/{id}` | Delete a product | No |
-| POST | `/users/register` | Register a new user with a hashed password | No |
-| POST | `/users/login` | Authenticate a user and return a JWT access token | No |
+| POST | `/products` | Add a new product | Yes |
+| PUT | `/products/{id}` | Update a product (creator only) | Yes |
+| DELETE | `/products/{id}` | Delete a product (creator only) | Yes |
+| POST | `/users/register` | Register a new user | No |
+| POST | `/users/login` | Authenticate and receive a JWT access token | No |
 | GET | `/users/{id}` | Retrieve a user's profile by ID | Yes |
 | PUT | `/users/{id}` | Update a user's name details | Yes |
 | DELETE | `/users/{id}` | Delete a user | Yes |
 
+For exact request/response bodies, use the interactive docs at `/docs` — they're generated directly from the schemas and always match the running code.
+
 ---
 
 # 📦 Sample Responses
-
-### GET /
-
-```json
-{
-    "message": "Server Running!"
-}
-```
-
-### GET /about
-
-```json
-{
-    "message": "This backend server is built using FastAPI."
-}
-```
-
-### POST /features
-
-```json
-{
-    "message": "Feature added successfully.",
-    "id": 4
-}
-```
-
-### PUT /features/{id}
-
-```json
-{
-    "message": "Feature updated successfully.",
-    "id": 4
-}
-```
-
-### DELETE /features/{id}
-
-```json
-{
-    "message": "Feature deleted successfully.",
-    "id": 4
-}
-```
 
 ### POST /products
 
@@ -306,7 +251,16 @@ User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)
     "name": "Wireless Mouse",
     "description": "Ergonomic wireless mouse.",
     "price": 1500.0,
-    "quantity": 25
+    "quantity": 25,
+    "created_by": 2
+}
+```
+
+### PUT /products/{id} — by a non-owner
+
+```json
+{
+    "detail": "You do not have permission to update this product."
 }
 ```
 
@@ -340,6 +294,20 @@ User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)
 }
 ```
 
+### Validation error (e.g. negative price)
+
+```json
+{
+    "detail": [
+        {
+            "type": "greater_than",
+            "loc": ["body", "price"],
+            "msg": "Input should be greater than 0"
+        }
+    ]
+}
+```
+
 ---
 
 # 📅 Internship Progress
@@ -347,24 +315,22 @@ User authentication is implemented using **OAuth2** with **JWT (JSON Web Tokens)
 - ✅ Week 1 — FastAPI setup, GET endpoints, middleware, browser & Postman testing
 - ✅ Week 2 — REST APIs, JSON handling, Pydantic models, modular routing, GET & POST endpoints
 - ✅ Week 3 — MySQL setup, SQLAlchemy integration, database connectivity, Insert & Read operations
-- ✅ Week 4 — User registration & login, password hashing with Passlib + Bcrypt, JWT authentication, protected routes, OAuth2PasswordBearer, dependency injection
-- ✅ Week 5 — Full CRUD operations (GET, POST, PUT, DELETE) across products, features, and users; restructured project into an MVC-style layout with a dedicated `crud/` data-access layer and consolidated `schemas.py`; fixed login to return proper `401` on invalid credentials; secured user profile endpoints with JWT authentication
-- ⬜ Week 6
-- ⬜ Week 7
-- ⬜ Week 8
+- ✅ Week 4 — User registration & login, password hashing, JWT authentication, protected routes, dependency injection
+- ✅ Week 5 — Full CRUD across all resources, MVC-style restructure with a `crud/` layer and consolidated `schemas.py`
+- ✅ Week 6 — Final backend management system: environment-based configuration, full input validation, ownership-based authorization linking products/features to their creator, and typed response models across the API
 
 ---
 
-# 🚀 Planned Learning
+# 🚀 Possible Next Steps
 
-As the internship continues, I plan to explore:
+Ideas for extending this project further:
 
-- SQLAlchemy ORM
-- Finer-grained authorization (e.g. users only editing their own resources)
-- Environment variables for secrets and config
-- Automated testing with pytest
-- Docker
-- Deployment
+- SQLAlchemy ORM instead of raw SQL
+- Pagination on list endpoints
+- Centralized/global exception handling
+- Automated tests with pytest
+- Dockerized setup
+- Deployment to a live host
 
 ---
 
@@ -377,4 +343,4 @@ As the internship continues, I plan to explore:
 
 ---
 
-> This repository is maintained as part of my DevSphere Python Backend Development Internship and is updated weekly to document my learning journey and backend development progress.
+> Built as part of my DevSphere Python Backend Development Internship — an 8-week journey from a single FastAPI endpoint to a fully authenticated, validated, and access-controlled backend system.
