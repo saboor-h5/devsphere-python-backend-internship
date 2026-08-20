@@ -2,7 +2,7 @@
 
 # 🐍 DevSphere Python Backend Internship
 
-### Documenting my 8-week Python Backend Development internship using FastAPI.
+### Documenting my 6-week Python Backend Development internship using FastAPI.
 
 ![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
@@ -20,7 +20,7 @@
 
 # 📖 About
 
-This repository documents my **8-week Python Backend Development Internship**, where I learned backend development by building a complete backend management system using **FastAPI**.
+This repository documents my **6-week Python Backend Development Internship**, where I learned backend development by building a complete backend management system using **FastAPI**.
 
 What started as small isolated endpoints in Week 1 grew into a fully authenticated, database-backed REST API with proper validation, ownership-based access control, and a clean layered architecture — the project below reflects that final state.
 
@@ -343,4 +343,4 @@ Ideas for extending this project further:
 
 ---
 
-> Built as part of my DevSphere Python Backend Development Internship — an 8-week journey from a single FastAPI endpoint to a fully authenticated, validated, and access-controlled backend system.
+> Built as part of my DevSphere Python Backend Development Internship — a 6-week journey from a single FastAPI endpoint to a fully authenticated, validated, and access-controlled backend system.
